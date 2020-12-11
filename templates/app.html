@@ -1,0 +1,126 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>python-socketio test</title>
+    <script type="text/javascript" src="//code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.4/socket.io.slim.js"></script>
+    <script type="text/javascript" charset="utf-8">
+        $(document).ready(function () {
+
+
+            function f(callback, imp) {
+                var token = prompt("what is your token?")
+                callback(token, imp)
+
+            }
+
+            function f1(token, imp) {
+                var socket = io("http://localhost:8000/chat", {
+                    path: '/chatserver/socket.io',
+                    transportOptions: {
+                        polling: {
+                            extraHeaders: {
+                                "TOKEN": token
+                            }
+                        }
+                    }
+                });
+                imp(socket, token)
+            }
+
+
+            var socket = f(f1, f3)
+
+            // var socket = io("http://localhost:8000/chat", {
+            //     path: '/chatserver/socket.io',
+            //     transportOptions: {
+            //         polling: {
+            //             extraHeaders: {
+            //                 "TOKEN": token
+            //                 // TOKEN: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJpbHlhIiwiZXhwIjoxNjAzMDIxNjk4fQ.J79KZ-jhwgjXRoY40kDcgg7Dcz5FE64S2afDeEQPhVI"
+            //             }
+            //         }
+            //     }
+            // });
+
+            var counter = 0
+            var lastId = "section"
+
+            function f3(socket, token) {
+                $("#send_direct_message").on('click', function () {
+                    let direct_message = $("#direct_message").val();
+                    let user_id = $("#user_id").val();
+                    $("#direct_message").val("");
+                    socket.emit("direct_message", {
+                        token: token,
+                        content: direct_message,
+                        content_type: "str",
+                        receiver: user_id
+                    })
+                    counter++
+                    lastId = "section" + counter
+
+                    $('#log').append('<li style="color: red; font-size: 1.3em" id="'+ lastId +'">me: ' + direct_message + '</li>');
+
+                });
+
+
+                socket.on("direct_message_sent", function (data) {
+                    $('#'+lastId).css("color", "yellow");
+                    //$('#log').append('<li style="color: blue; font-size: 1.3em">message: ' + data["message"] + '</li>')
+
+                });
+
+                socket.on("direct_message_seen_ack", function (data) {
+                    $('#'+lastId).css("color", "green");
+                });
+
+                socket.on("direct_message", function (msg) {
+                    socket.emit("direct_message_seen", {token: token, sender: msg["sender"]})
+
+                    $('#log').append('<li style="color: red; font-size: 1.3em">message: ' + msg["content"] + '</li>');
+
+                });
+
+                socket.on("error", function (err) {
+                    //alert(err)
+                    $('#log').append('<li style="color: crimson; font-size: 1.3em"><b>Error Connection:</b> ' + err + '</li>');
+                });
+
+
+                socket.on('connect', function (msg) {
+                    //socket.emit('my_event', {data: 'I\'m connected!'});
+                    //alert("connected!")
+
+                    $('#log').append('<li style="color: greenyellow; font-size: 1.3em">connected</li>');
+                });
+                socket.on('disconnect', function () {
+
+                    $('#log').append('<li style="color: red; font-size: 1.3em">disconnected</li>');
+                });
+
+            }
+
+
+        })
+        ;
+    </script>
+</head>
+<body>
+<h1>python-socketio test</h1>
+<h2>Send:</h2>
+
+<label for="direct_message">Direct Message</label>
+
+<input type="text" id="direct_message"/>
+<input type="text" id="user_id">
+<button id="send_direct_message">direct message</button>
+
+
+<hr>
+<br>
+<div id="log">
+
+</div>
+</body>
+</html>
